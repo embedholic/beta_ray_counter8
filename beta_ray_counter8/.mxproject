@@ -9,17 +9,17 @@ CDefines=USE_HAL_DRIVER;STM32L432xx;USE_HAL_DRIVER;USE_HAL_DRIVER;
 [PreviousGenFiles]
 AdvancedFolderStructure=true
 HeaderFileListSize=3
-HeaderFiles#0=D:/MY_WORK_NEW/kaeri/counter_8ch/fw/v0.2_timer/Core/Inc/stm32l4xx_it.h
-HeaderFiles#1=D:/MY_WORK_NEW/kaeri/counter_8ch/fw/v0.2_timer/Core/Inc/stm32l4xx_hal_conf.h
-HeaderFiles#2=D:/MY_WORK_NEW/kaeri/counter_8ch/fw/v0.2_timer/Core/Inc/main.h
+HeaderFiles#0=D:/JCNET_GIT/KAERI/RAY_COUNTER/beta_ray_counter8/beta_ray_counter8/Core/Inc/stm32l4xx_it.h
+HeaderFiles#1=D:/JCNET_GIT/KAERI/RAY_COUNTER/beta_ray_counter8/beta_ray_counter8/Core/Inc/stm32l4xx_hal_conf.h
+HeaderFiles#2=D:/JCNET_GIT/KAERI/RAY_COUNTER/beta_ray_counter8/beta_ray_counter8/Core/Inc/main.h
 HeaderFolderListSize=1
-HeaderPath#0=D:/MY_WORK_NEW/kaeri/counter_8ch/fw/v0.2_timer/Core/Inc
+HeaderPath#0=D:/JCNET_GIT/KAERI/RAY_COUNTER/beta_ray_counter8/beta_ray_counter8/Core/Inc
 HeaderFiles=;
 SourceFileListSize=3
-SourceFiles#0=D:/MY_WORK_NEW/kaeri/counter_8ch/fw/v0.2_timer/Core/Src/stm32l4xx_it.c
-SourceFiles#1=D:/MY_WORK_NEW/kaeri/counter_8ch/fw/v0.2_timer/Core/Src/stm32l4xx_hal_msp.c
-SourceFiles#2=D:/MY_WORK_NEW/kaeri/counter_8ch/fw/v0.2_timer/Core/Src/main.c
+SourceFiles#0=D:/JCNET_GIT/KAERI/RAY_COUNTER/beta_ray_counter8/beta_ray_counter8/Core/Src/stm32l4xx_it.c
+SourceFiles#1=D:/JCNET_GIT/KAERI/RAY_COUNTER/beta_ray_counter8/beta_ray_counter8/Core/Src/stm32l4xx_hal_msp.c
+SourceFiles#2=D:/JCNET_GIT/KAERI/RAY_COUNTER/beta_ray_counter8/beta_ray_counter8/Core/Src/main.c
 SourceFolderListSize=1
-SourcePath#0=D:/MY_WORK_NEW/kaeri/counter_8ch/fw/v0.2_timer/Core/Src
+SourcePath#0=D:/JCNET_GIT/KAERI/RAY_COUNTER/beta_ray_counter8/beta_ray_counter8/Core/Src
 SourceFiles=;
 

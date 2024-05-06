@@ -1,0 +1,4 @@
+counter.c:87:6:my_tick_callback	4	static
+counter.c:110:6:exec_counter_param	16	static
+counter.c:115:6:counter_task	32	static
+counter.c:190:6:process_cmd	24	static

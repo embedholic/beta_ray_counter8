@@ -6,8 +6,10 @@
  */
 
 #include "main.h"
-#include "stm32l4xx_hal.h"
+//#include "stm32l4xx_hal.h"
 #include <stdio.h>
+#include "jcnet.h"
+
 extern UART_HandleTypeDef huart2;
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
@@ -41,6 +43,43 @@ struct _sys_param_tag {
 		10*10, // 100 mili
 		10 , // 1/100 * 10 = 0.1 seconds = 100 mili
 };
+uint8_t uart2_rx_Q_buf[64];
+uart_rx_queue_t uart2_rx_q =
+{
+		.data = uart2_rx_Q_buf,
+		.size = 64
+};
+
+int insert_uart(uint8_t ch)
+{
+	uart_rx_queue_t *Q;
+	Q = &uart2_rx_q;
+	if((Q->wr + 1) % Q->size == Q->rd)
+	{
+	        return -1; // Full
+	}
+    Q->data[Q->wr] = ch;
+	Q->wr = (Q->wr + 1) % Q->size;
+	return 0;
+}
+int delete_uart_Q()
+{
+        int ch;
+    	uart_rx_queue_t *Q;
+    	Q = &uart2_rx_q;
+
+        if(Q->wr == Q->rd) return -1;
+        ch = Q->data[Q->rd];
+        Q->rd = (Q->rd + 1) % Q->size;
+        return ch;
+}
+
+int is_available()
+{
+		uart_rx_queue_t *Q;
+		Q = &uart2_rx_q;
+        return (Q->wr != Q->rd);
+}
 
 void my_loop()
 {
@@ -77,7 +116,7 @@ void my_loop()
 			if(cur_tick - sys_param.tx_last_tick >= sys_param.tx_period_ms)
 			{
 				sys_param.tx_last_tick = cur_tick;
-				printf("Tx..\n");
+//				printf("Tx..\n");
 				GPIOB->ODR ^= LD3_Pin;
 			}
 #endif

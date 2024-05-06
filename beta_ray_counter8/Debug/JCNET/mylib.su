@@ -1,0 +1,5 @@
+mylib.c:16:5:_write	32	static
+mylib.c:53:5:insert_uart	24	static
+mylib.c:65:5:delete_uart_Q	16	static
+mylib.c:77:5:is_available	16	static
+mylib.c:84:6:my_loop	24	static

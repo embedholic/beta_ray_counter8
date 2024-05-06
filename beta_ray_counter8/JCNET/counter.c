@@ -54,11 +54,14 @@ msg2=Sa000Fffaa80123457d7f
  */
 
 #include "main.h"
+#include "jcnet.h"
 extern UART_HandleTypeDef huart2;
 extern DMA_HandleTypeDef hdma_usart2_rx;
 
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
+extern LPTIM_HandleTypeDef hlptim1;
+extern LPTIM_HandleTypeDef hlptim2;
 
 #define GET_COUNT() htim2.Instance->CNT
 
@@ -103,8 +106,35 @@ void my_tick_callback()
 __IO uint32_t idle_counter_prev = 0;
 uint8_t ack_buf[128];
 extern void display_run(uint32_t min, uint32_t max, uint32_t cur, uint32_t remain_time);
+static uint32_t pre_tick = 0;
+void exec_counter_param(char *buf)
+{
+}
+
+counter_type ray_counter;
 void counter_task()
 {
+	int i;
+	uint32_t cur_tick, tmp_cnt;
+	cur_tick = HAL_GetTick();
+	if(cur_tick - ray_counter.rd_tick >= COUNTER_GATHER_PERIOD)
+	{
+		ray_counter.CNT[0] = htim1.Instance->CNT & 0xffff;
+		ray_counter.CNT[1] = htim2.Instance->CNT & 0xffff;
+		ray_counter.CNT[2] = hlptim1.Instance->CNT & 0xffff;
+		ray_counter.CNT[3] = hlptim2.Instance->CNT & 0xffff;
+
+		for( i = 0 ; i < 8 ; i ++)
+		{
+			tmp_cnt = ray_counter.CNT[i] & 0xffff;
+			ray_counter.acc_cntrs[i] += (uint32_t)((tmp_cnt - ray_counter.pre_cntrs[i]) & 0xffff);
+			ray_counter.pre_cntrs[i] = tmp_cnt;
+		}
+		ray_counter.rd_tick = cur_tick;
+	}
+
+
+
 	if(S_run_flag)
 	{
 		if(S_run_display_flag)

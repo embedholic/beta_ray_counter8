@@ -188,6 +188,15 @@ void uart_loop()
       reinit_uart(2);
       printf("UART2 reinit\n");
 	}
+	if(is_available())
+	{
+		extern int delete_uart_Q();
+		extern int is_available();
+		extern int do_cmd(char ch);
+		char ch;
+		ch = delete_uart_Q();
+		do_cmd(ch);
+	}
 }
 
 #if 0

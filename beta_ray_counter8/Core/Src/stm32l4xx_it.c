@@ -220,7 +220,29 @@ void DMA1_Channel5_IRQHandler(void)
 void USART2_IRQHandler(void)
 {
   /* USER CODE BEGIN USART2_IRQn 0 */
-
+	extern int insert_uart(uint8_t ch);
+	uint32_t isrflags   = READ_REG(huart2.Instance->ISR);
+	uint32_t cr1its     = READ_REG(huart2.Instance->CR1);
+	uint32_t cr3its     = READ_REG(huart2.Instance->CR3);
+	uint32_t errorflags;
+	/* If no error occurs */
+	errorflags = (isrflags & (uint32_t)(USART_ISR_PE | USART_ISR_FE | USART_ISR_ORE | USART_ISR_NE));
+	if (errorflags == RESET)
+	{
+	   /* UART in mode Receiver ---------------------------------------------------*/
+	     if(((isrflags & USART_ISR_RXNE) != RESET) && ((cr1its & USART_CR1_RXNEIE) != RESET))
+	     {
+	    	 insert_uart(READ_REG(huart2.Instance->RDR));
+	          return;
+	     }
+	}
+	else
+	{
+		volatile uint8_t tmp;
+		tmp = huart2.Instance->RDR;
+		tmp = huart2.Instance->RDR;
+		tmp = huart2.Instance->RDR;
+	}
   /* USER CODE END USART2_IRQn 0 */
   HAL_UART_IRQHandler(&huart2);
   /* USER CODE BEGIN USART2_IRQn 1 */

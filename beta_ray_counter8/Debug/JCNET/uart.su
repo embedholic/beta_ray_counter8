@@ -1,0 +1,6 @@
+uart.c:22:6:HAL_UART_ErrorCallback	16	static
+uart.c:40:6:reinit_uart	16	static
+uart.c:73:9:gethex	24	static
+uart.c:90:6:uart_rx_char	16	static
+uart.c:163:6:rx_dma_process	16	static
+uart.c:174:6:uart_loop	16	static
