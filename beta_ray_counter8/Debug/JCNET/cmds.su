@@ -1,7 +1,8 @@
 cmds.c:15:6:disp_counter	24	static
-cmds.c:34:6:_delay_us	24	static
-cmds.c:39:6:clock_gen	24	static
-cmds.c:59:5:exec_cmd	32	static
-cmds.c:73:13:my_putchar	16	static
-cmds.c:77:5:get_args	32	static
-cmds.c:128:5:do_cmd	152	static
+cmds.c:38:6:_delay_us_tim15	24	static
+cmds.c:49:6:_delay_us_sw	24	static
+cmds.c:54:6:clock_gen	24	static
+cmds.c:74:5:exec_cmd	32	static
+cmds.c:88:13:my_putchar	16	static
+cmds.c:92:5:get_args	32	static
+cmds.c:143:5:do_cmd	152	static

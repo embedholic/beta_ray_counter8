@@ -30,8 +30,23 @@ const cmd_node_t cmd_tbl[] =
                 {"clock_gen",     clock_gen,    "clock_gen number"},
 				{"counter",       disp_counter, "display 8 channel counters"},
 };
+extern TIM_HandleTypeDef htim15;
+#define CLOCKS_PER_US 80 // 80Mhz timer clock
+#define _delay_us _delay_us_tim15
 
-void _delay_us(uint32_t v)
+// 800 us maximum
+void _delay_us_tim15(uint32_t v)
+{
+	uint16_t start_tick, elapse;
+	start_tick = htim15.Instance->CNT;
+	v *= 80;
+	while(1)
+	{
+		elapse =  (uint16_t)(htim15.Instance->CNT & 0xffff) - start_tick;
+		if(elapse >= v) return;
+	}
+}
+void _delay_us_sw(uint32_t v)
 {
 	volatile i ;
 	for( i = 0 ; i < v ; i ++);
