@@ -1,0 +1,8 @@
+i2c_clcd.c:22:5:i2c_transmit	32	static
+i2c_clcd.c:27:6:i2c_init	4	static
+i2c_clcd.c:32:6:i2c_lcd_init	8	static
+i2c_clcd.c:52:6:i2c_lcd_command_8	24	static
+i2c_clcd.c:62:6:i2c_lcd_command	24	static
+i2c_clcd.c:75:6:i2c_lcd_data	24	static
+i2c_clcd.c:88:6:i2c_lcd_goto_XY	24	static
+i2c_clcd.c:96:6:i2c_lcd_string	16	static
