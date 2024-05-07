@@ -10,16 +10,14 @@
 #include "string.h"
 #include "jcnet.h"
 void clock_gen(int ac, char *av[]);
+void param(int ac, char *av[]);
+void disp_counter(int ac, char *av[]);
+void reboot(int ac, char *av[]);
+void disp_counter(int ac, char *av[]);
+void help(int ac, char *av[]);
 
 extern counter_type ray_counter;
-void disp_counter(int ac, char *av[])
-{
-	int i;
-	for( i = 0 ; i < 8 ; i ++)
-	{
-		printf("CH=%d CNT=%8d\n",i,ray_counter.acc_cntrs[i]);
-	}
-}
+
 typedef struct _cmd_node_tag {
         const char *cmd;
         void (*fn)(int ac, char *av[]);
@@ -29,28 +27,94 @@ const cmd_node_t cmd_tbl[] =
 {
                 {"clock_gen",     clock_gen,    "clock_gen number"},
 				{"counter",       disp_counter, "display 8 channel counters"},
+				{"param" ,        param,        "param get/set"},
+				{"reboot" ,       reboot,       "restart board by watchdog reset"},
+				{"help",          help,         "display possible command and description"}
 };
-extern TIM_HandleTypeDef htim15;
-#define CLOCKS_PER_US 80 // 80Mhz timer clock
-#define _delay_us _delay_us_tim15
 
-// 800 us maximum
-void _delay_us_tim15(uint32_t v)
+
+void disp_counter(int ac, char *av[])
 {
-	uint16_t start_tick, elapse;
-	start_tick = htim15.Instance->CNT;
-	v *= 80;
-	while(1)
+	int i;
+	for( i = 0 ; i < 8 ; i ++)
 	{
-		elapse =  (uint16_t)(htim15.Instance->CNT & 0xffff) - start_tick;
-		if(elapse >= v) return;
+		printf("CH=%d CNT=%8d\n",i,ray_counter.acc_cntrs[i]);
 	}
 }
-void _delay_us_sw(uint32_t v)
+void reboot(int ac, char *av[])
 {
-	volatile i ;
-	for( i = 0 ; i < v ; i ++);
+	 __disable_irq();
+	 while(1);
 }
+
+void help(int ac, char *av[])
+{
+	int i;
+	for( i = 0 ; i < sizeof(cmd_tbl)/sizeof(cmd_tbl[1]); i ++)
+	{
+		printf("%s : %s\n",cmd_tbl[i].cmd, cmd_tbl[i].help);
+	}
+}
+
+
+#define CLOCKS_PER_US 80 // 80Mhz timer clock
+#define _delay_us _delay_us_tim15
+extern void _delay_us_tim15(uint32_t v);
+extern void _delay_us_sw(uint32_t v);
+
+void param(int ac, char *av[])
+{
+	if(ac < 2)
+	{
+	 printf("Usage : param get/set\n");
+	 return 0;
+	}
+
+	if(!strcmp(av[1],"get"))
+	{
+		  system_type tmp;
+		  int res;
+		  res = param_get((uint32_t *)&tmp);
+		  if(res)
+		  {
+			  printf("param invalid\n");
+			  return;
+		  }
+		  printf("CNT=%s\nFMT=%s\nPERIOD=%dmS\n",
+				  (tmp.cnt_type == CNT_TYPE_W)?"WINDOW":"OUT",
+				  (tmp.dis_format == D_FMT_DEC)?"DEC":"HEX",
+						  tmp.update_period_tick);
+		  return;
+	}
+	if(!strcmp(av[1],"set"))
+	{
+		uint32_t tmp;
+		if(ac != 4)
+		{
+			printf("param set type/fmt/period param\n");
+			return;
+		}
+		sscanf(av[3],"%d",&tmp);
+		if(!strcmp(av[2],"type"))
+		{
+			sys_info.cnt_type = tmp;
+		}
+		else if(!strcmp(av[2],"fmt"))
+		{
+			sys_info.dis_format = tmp;
+		}
+		else if(!strcmp(av[2],"period"))
+		{
+			sys_info.update_period_tick = tmp;
+		}
+		else {
+			printf("Invalid param %s \n",av[2]);
+			return;
+		}
+	    param_set(*(uint32_t *)&sys_info);
+	}
+}
+
 void clock_gen(int ac, char *av[])
 {
 	int cnt = 0;

@@ -50,6 +50,25 @@ uart_rx_queue_t uart2_rx_q =
 		.size = 64
 };
 
+// 800 us maximum
+void _delay_us_tim15(uint32_t v)
+{
+	uint16_t start_tick, elapse;
+	start_tick = htim15.Instance->CNT;
+	v *= 80;
+	while(1)
+	{
+		elapse =  (uint16_t)(htim15.Instance->CNT & 0xffff) - start_tick;
+		if(elapse >= v) return;
+	}
+}
+void _delay_us_sw(uint32_t v)
+{
+	volatile i ;
+	for( i = 0 ; i < v ; i ++);
+}
+
+
 int insert_uart(uint8_t ch)
 {
 	uart_rx_queue_t *Q;
@@ -83,43 +102,72 @@ int is_available()
 
 void my_loop()
 {
-	uint32_t cur_tick,pre_tick;
-	uint32_t elapsed_tick = 0;
-	pre_tick = htim1.Instance->CNT;
+	uint32_t led_tick;
 	while(1)
 	{
-//		printf("HI ~ isjeon \n");
-//		HAL_Delay(1000);
+		if(HAL_GetTick() - led_tick >= 500)
+		{
+			if(GPIOB->IDR & LD3_Pin) GPIOB->BSRR = LD3_Pin << 16;
+			else GPIOB->BSRR = LD3_Pin;
+			led_tick = HAL_GetTick();
+		}
 
 		counter_task();
 		uart_loop();
-		if(S_run_flag == 0)
-		{
-			cur_tick = HAL_GetTick();
-#if 0
-			if(cur_tick - pre_tick >= 1000)
-			{
-				pre_tick = cur_tick;
-				idle_seconds += 1;
-				g_idle_acc_cnt = htim2.Instance->CNT;
-				if(S_done_lead_time)
-				{
-					S_done_lead_time--;
-					idle_counter_prev = htim2.Instance->CNT;
-				}
-				else {
-					display_idle(g_idle_acc_cnt - idle_counter_prev ,idle_seconds);
-					idle_counter_prev = g_idle_acc_cnt;
-				}
-			}
-#else
-			if(cur_tick - sys_param.tx_last_tick >= sys_param.tx_period_ms)
-			{
-				sys_param.tx_last_tick = cur_tick;
-//				printf("Tx..\n");
-				GPIOB->ODR ^= LD3_Pin;
-			}
-#endif
-		}
 	}
+}
+
+//
+// FLASH page 31 -> 127(256K flash)
+// 0x0800:f800 ~ 0x0800:ffff : 0x800 = 2K
+
+int erase_pages(int page, int num)
+{
+    FLASH_EraseInitTypeDef flash_erase;
+    uint32_t ecode;
+    int ret;
+    flash_erase.TypeErase = 0;
+    flash_erase.Banks = FLASH_BANK_1;
+    flash_erase.Page = page;
+    flash_erase.NbPages = num;
+    ret = HAL_FLASH_Unlock();
+    ret += HAL_FLASHEx_Erase(&flash_erase,&ecode);
+    ecode = HAL_FLASH_GetError();
+    ret += HAL_FLASH_Lock();
+    return ret;
+}
+int param_set(uint32_t v)
+{
+    FLASH_EraseInitTypeDef flash_erase;
+    int sector, num;
+    uint32_t ecode;
+    HAL_StatusTypeDef ret;
+    uint32_t addr = 0x0803f800; // last 31 page start address
+    uint64_t data;
+
+    ret = erase_pages(127,1);
+
+    if(ret) return ret;
+    HAL_Delay(1);
+    data = v | ((uint64_t)~v << 32);
+    HAL_FLASH_Unlock();
+    HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD,addr, data);
+    HAL_FLASH_Lock();
+    return ret;
+}
+
+int param_get(uint32_t *v)
+{
+    uint32_t addr = 0x0803f800; // last 31 page start address
+    uint32_t a,b;
+    a = ((__IO uint32_t *)addr)[0];
+    b = ((__IO uint32_t *)addr)[1];
+    if(a == 0xffffffff && b == 0xffffffff) return 2;
+    b = a + b;
+    if(b == 0xffffffff)
+    {
+    	*v = a;
+    	return 0;
+    }
+    return 1;
 }

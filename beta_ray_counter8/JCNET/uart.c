@@ -159,6 +159,7 @@ void uart_rx_char(uint8_t ch)
 	return;
 }
 
+#if 0
 int uart1_rx_ptr;
 void rx_dma_process()
 {
@@ -171,12 +172,142 @@ void rx_dma_process()
 		wr_ptr = UART1_DMA_BUF_SZ - hdma_usart1_rx.Instance->CNDTR;
 	}
 }
+#else
+int uart1_rx_ptr;
+
+uint32_t A2HEX(char *p)
+{
+	uint32_t v = 0;
+	if('a' <= *p && *p <= 'f') v = *p - 'a' + 10;
+	else if('A' <= *p && *p <= 'F') v = *p - 'A' + 10;
+	else if('0' <= *p && *p <= '9') v = *p - '0';
+	p++;
+	v <<= 4;
+
+	if('a' <= *p && *p <= 'f') v |= *p - 'a' + 10;
+	else if('A' <= *p && *p <= 'F') v |= *p - 'A' + 10;
+	else if('0' <= *p && *p <= '9') v |= *p - '0';
+	p++;
+	v <<= 4;
+
+	if('a' <= *p && *p <= 'f') v |= *p - 'a' + 10;
+	else if('A' <= *p && *p <= 'F') v |= *p - 'A' + 10;
+	else if('0' <= *p && *p <= '9') v |= *p - '0';
+	p++;
+	v <<= 4;
+
+	if('a' <= *p && *p <= 'f') v |= *p - 'a' + 10;
+	else if('A' <= *p && *p <= 'F') v |= *p - 'A' + 10;
+	else if('0' <= *p && *p <= '9') v |= *p - '0';
+
+	return v;
+}
+void rx_dma_process()
+{
+	extern void update_slave_cnt(uint32_t *v);
+	char buf[UART1_DMA_BUF_SZ + 1];
+	uint32_t cntr;
+	uint32_t cnt[4];
+	static uint32_t pre_cntr = UART1_DMA_BUF_SZ;
+	cntr = hdma_usart1_rx.Instance->CNDTR;
+	if(cntr > pre_cntr)
+	{
+		memcpy(buf,uart1_rx_buf,UART1_DMA_BUF_SZ);
+		buf[UART1_DMA_BUF_SZ] = 0;
+		if(buf[0] == '$' && buf[UART1_DMA_BUF_SZ - 1] == 0x0a)
+		{
+			cnt[0] = A2HEX(buf+1);
+			cnt[1] = A2HEX(buf+1+4);
+			cnt[2] = A2HEX(buf+1+4+4);
+			cnt[3] = A2HEX(buf+1+4+4+4);
+			update_slave_cnt(cnt);
+		}
+		else
+		{
+	    	reinit_flag_1 = 2;
+//			printf("Err\n");
+		}
+	}
+	pre_cntr = cntr;
+}
+#endif
+#if 0
+void insert_dma_queue()
+{
+	int wr_ptr;
+	int num,i;
+	uint32_t save_imask;
+	uart_dma_queue_type *q;
+//	__disable_irq();
+	save_imask = cli_context();
+	q = &BGAPI_Q;
+	wr_ptr = q->max - q->H->Instance->NDTR;
+	if(wr_ptr != q->cur) // something inputted ..
+	{
+		num = wr_ptr - q->cur;
+
+        if(num < 0) // rounding
+        {
+        	num += q->max;
+        }
+//#define Q_DEBUG
+
+
+        while(num--)
+        {
+        	if(bgapi_num > BGAPI_CMD_NUM) goto xxx;
+        	if((bgapi_index == 0))
+        	{
+        		if((q->dma_buf[q->cur] & 0xf) == 0x08) // start of message
+        		{
+        			bgapi_cmd[bgapi_wr][bgapi_index] = q->dma_buf[q->cur];
+        			bgapi_index ++;
+
+        		}
+
+        	}
+
+        	else if(bgapi_index < 4)
+        	{
+    			bgapi_cmd[bgapi_wr][bgapi_index] = q->dma_buf[q->cur];
+    			bgapi_index ++;
+    			if(bgapi_index == 4)
+        		bgapi_pdu_size = BGLIB_MSG_LEN(bgapi_cmd[bgapi_wr]);
+        	}
+        	else
+        	{
+    			bgapi_cmd[bgapi_wr][bgapi_index] = q->dma_buf[q->cur];
+    			bgapi_index ++;
+    			if(--bgapi_pdu_size <= 0)
+    			{
+    				bgapi_wr = (bgapi_wr + 1 ) % BGAPI_CMD_NUM;
+    				bgapi_index = 0;
+    				bgapi_num ++;
+    			}
+        	}
+xxx:
+			q->cur++;
+			if(q->cur >= q->max) q->cur = 0;
+        }
+
+        q->prev = pClock->Instance->CNT;
+	}
+
+	sei_context(save_imask);
+//	__enable_irq();
+
+}
+#endif
 void uart_loop()
 {
-	rx_dma_process();
+//	rx_dma_process();
 
 	if(reinit_flag_1)
 	{
+	  if(reinit_flag_1 == 2)
+	  {
+		  printf("Slave sync error \n");
+	  }
       reinit_flag_1 = 0;
       reinit_uart(1);
       printf("UART1 reinit\n");

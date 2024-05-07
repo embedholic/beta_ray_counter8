@@ -22,7 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "i2c_clcd.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,6 +42,8 @@
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
 
+IWDG_HandleTypeDef hiwdg;
+
 LPTIM_HandleTypeDef hlptim1;
 LPTIM_HandleTypeDef hlptim2;
 
@@ -52,6 +54,7 @@ TIM_HandleTypeDef htim15;
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart1_rx;
+DMA_HandleTypeDef hdma_usart1_tx;
 
 /* USER CODE BEGIN PV */
 
@@ -69,6 +72,7 @@ static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM15_Init(void);
+static void MX_IWDG_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -77,9 +81,18 @@ static void MX_TIM15_Init(void);
 /* USER CODE BEGIN 0 */
 #include "jcnet.h"
 
-char uart1_rx_buf[UART1_DMA_BUF_SZ];
-char uart2_rx_buf[1];
+__IO char uart1_rx_buf[UART1_DMA_BUF_SZ];
+__IO char uart2_rx_buf[1];
+system_type sys_info = {
+		.cnt_type = CNT_TYPE_W,
+		.dis_format = D_FMT_DEC,
+		.update_period_tick = COUNTER_UPDATE_DFT_PERIOD
+};
 
+void MY_IWDG_Init()
+{
+	MX_IWDG_Init();
+}
 /* USER CODE END 0 */
 
 /**
@@ -119,15 +132,38 @@ int main(void)
   MX_TIM2_Init();
   MX_USART1_UART_Init();
   MX_TIM15_Init();
+  MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start(&htim1);
   HAL_TIM_Base_Start(&htim2);
   HAL_TIM_Base_Start(&htim15);
   HAL_LPTIM_Counter_Start(&hlptim1,0xffff);
   HAL_LPTIM_Counter_Start(&hlptim2,0xffff);
-  HAL_UART_Receive_IT(&huart2, uart1_rx_buf, 1);
+  HAL_UART_Receive_IT(&huart2, uart2_rx_buf, 1);
   HAL_UART_Receive_DMA(&huart1,uart1_rx_buf,UART1_DMA_BUF_SZ);
   printf("Hi~. ray counter 8 channel f/w\n");
+  i2c_lcd_init();
+  i2c_lcd_string(0, 0," [BETA RAY CNT] ");
+  i2c_lcd_string(1, 0,"   by JCNET ");
+  {
+	  system_type tmp;
+	  int res;
+	  res = param_get((uint32_t *)&tmp);
+	  if(res)
+	  {
+		  printf("param invalid..to default\n");
+		  param_set(*(uint32_t *)&sys_info);
+	  }
+	  else
+	  {
+		  memcpy(&sys_info,&tmp,sizeof(tmp));
+	  }
+	  printf("CNT=%s\nFMT=%s\nPERIOD=%dmS\n",
+			  (sys_info.cnt_type == CNT_TYPE_W)?"WINDOW":"OUT",
+			  (sys_info.dis_format == D_FMT_DEC)?"DEC":"HEX",
+					  sys_info.update_period_tick);
+
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -156,7 +192,8 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_MSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_MSI;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.MSIState = RCC_MSI_ON;
   RCC_OscInitStruct.MSICalibrationValue = 0;
   RCC_OscInitStruct.MSIClockRange = RCC_MSIRANGE_6;
@@ -247,6 +284,35 @@ static void MX_I2C1_Init(void)
   /* USER CODE BEGIN I2C1_Init 2 */
 
   /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
+  * @brief IWDG Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_IWDG_Init(void)
+{
+
+  /* USER CODE BEGIN IWDG_Init 0 */
+
+  /* USER CODE END IWDG_Init 0 */
+
+  /* USER CODE BEGIN IWDG_Init 1 */
+
+  /* USER CODE END IWDG_Init 1 */
+  hiwdg.Instance = IWDG;
+  hiwdg.Init.Prescaler = IWDG_PRESCALER_4;
+  hiwdg.Init.Window = 4095;
+  hiwdg.Init.Reload = 4095;
+  if (HAL_IWDG_Init(&hiwdg) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN IWDG_Init 2 */
+
+  /* USER CODE END IWDG_Init 2 */
 
 }
 
@@ -546,6 +612,9 @@ static void MX_DMA_Init(void)
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
+  /* DMA1_Channel4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
   /* DMA1_Channel5_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
