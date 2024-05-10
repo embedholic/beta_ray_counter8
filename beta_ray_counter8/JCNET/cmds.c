@@ -15,7 +15,9 @@ void disp_counter(int ac, char *av[]);
 void reboot(int ac, char *av[]);
 void disp_counter(int ac, char *av[]);
 void help(int ac, char *av[]);
-
+void debug(int ac, char *av[]);
+void md(int ac, char *av[]);
+void erase(int ac, char *av[]);
 extern counter_type ray_counter;
 
 typedef struct _cmd_node_tag {
@@ -29,10 +31,52 @@ const cmd_node_t cmd_tbl[] =
 				{"counter",       disp_counter, "display 8 channel counters"},
 				{"param" ,        param,        "param get/set"},
 				{"reboot" ,       reboot,       "restart board by watchdog reset"},
+				{"debug",         debug,        "Supress output to PC for debugging"},
+				{"md",            md,           "memory dump"},
+				{"erase",         erase,        "flash erase"},
 				{"help",          help,         "display possible command and description"}
 };
 
 
+void md(int ac, char *av[])
+{
+	int i;
+	uint32_t addr, len;
+	if(ac == 3) // md addr len
+	{
+		sscanf(av[1],"%x",&addr);
+		sscanf(av[2],"%x",&len);
+	}
+	else if(ac == 2)
+	{
+		sscanf(av[1],"%x",&addr);
+		len = 1;
+	}
+	printf("%08x : ",addr);
+	for( i = 0 ; i < len / 4; i ++)
+	{
+		printf("%08x ",*(uint32_t*)(addr+i));
+	}
+	printf("\n");
+}
+void erase(int ac, char *av[])
+{
+	uint32_t page;
+	if(ac == 2) // erase page
+	{
+		sscanf(av[1],"%d",&page);
+	}
+	printf("Erase page = %d\n",page);
+	erase_pages(page,1);
+}
+__IO uint32_t g_output_to_pc = 1;
+void debug(int ac, char *av[])
+{
+	static int flag = 0;
+	flag = !flag;
+	if(flag) g_output_to_pc = 0;
+	else g_output_to_pc = 1;
+}
 void disp_counter(int ac, char *av[])
 {
 	int i;
@@ -215,10 +259,12 @@ int do_cmd(char ch)
                  my_putchar('\n');
 #endif
                  cmd_buf[idx] = '\0';
-                 if(cmd_buf[0] == STX)
+                 if(cmd_buf[0] == START_CHAR)
                  {
                 	 extern void exec_counter_param(char *);
                 	 exec_counter_param(cmd_buf);
+                	 idx = 0;
+                	 return;
                  }
 #if 1
                  if(!strncmp(cmd_buf,"!!",2))

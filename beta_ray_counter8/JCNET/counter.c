@@ -94,14 +94,60 @@ __IO uint32_t idle_counter_prev = 0;
 uint8_t ack_buf[128];
 extern void display_run(uint32_t min, uint32_t max, uint32_t cur, uint32_t remain_time);
 static uint32_t pre_tick = 0;
-void exec_counter_param(char *buf)
-{
-}
-
 counter_type ray_counter =
 {
 //		.update_period_tick = COUNTER_UPDATE_DFT_PERIOD,
 };
+
+void exec_counter_param(char *buf)
+{
+	uint32_t tmp;
+	system_type info;
+	int i;
+	if(strlen(buf) < 8) return; // illegal size
+	if(buf[1] == 'D') info.dis_format = D_FMT_DEC;
+	else if(buf[1] == 'H') info.dis_format = D_FMT_HEX;
+	else return; // format error
+
+	if(buf[2] == 'W') info.cnt_type = CNT_TYPE_W;
+	else if(buf[2] == 'O') info.cnt_type = CNT_TYPE_O;
+	else return; // format error
+
+	sscanf(buf+3,"%d",&tmp);
+	if(tmp > 100) // 10초보다 크면 10초로 고정
+    tmp = 100;
+	if(tmp < 10) // 0.1~0.9
+	{
+		info.update_period_tick = tmp * 100; // ms 단위로 환산
+	}
+	else
+	{
+		tmp = tmp / 10; // 소숫점은 버림.. 1.1초 같은건 없음.
+		info.update_period_tick = tmp * 1000; // ms 단위로 환산
+	}
+	if(!param_set(*(uint32_t *)&info))
+	{
+		memcpy(&sys_info, &info, sizeof(info));
+		ray_counter.rd_tick = HAL_GetTick();
+		for( i = 0 ; i < 8 ; i ++)
+		{
+			ray_counter.pre_cntrs[i] = ray_counter.CNT[i] & 0xffff;
+			ray_counter.acc_cntrs[i] = 0;
+		}
+		ray_counter.update_tick = HAL_GetTick();
+
+	    info_printf("New param applied CNT=%s\nFMT=%s\nPERIOD=%dmS\n",
+				  (sys_info.cnt_type == CNT_TYPE_W)?"WINDOW":"OUT",
+				  (sys_info.dis_format == D_FMT_DEC)?"DEC":"HEX",
+						  sys_info.update_period_tick);
+	}
+	else
+	{
+		info_printf("New param save failed !\n");
+	}
+}
+
+
 extern system_type sys_info;
 void update_slave_cnt(uint32_t *v)
 {
@@ -141,9 +187,10 @@ void counter_task()
 	}
 	if(cur_tick - ray_counter.update_tick >= sys_info.update_period_tick)
 	{
-		char buf[20];
+		static char buf[3 + 6 + 7*4 + 2]; // 3(S/D/W), SEQ(5+1(,)), COUNT(7*4) + NULL + EXTRA) = 38bytes tx = 3.3ms at 115200
+		static char disp_buf[20];
 		static uint32_t a,b,c,d;
-//#define CLCD_TIME_EVAL
+
 #ifdef CLCD_TIME_EVAL
 		uint32_t start_tick,end_tick;
 #endif
@@ -151,25 +198,61 @@ void counter_task()
 		b = a + a;
 		c = a + a + a;
 		d = a + a + a + a;
+		if(sys_info.cnt_type == CNT_TYPE_W)
+		{
+
+		}
+		else // CNT_TYPE_O
+		{
+
+		}
 		if(a > 999999) a = 0;
 		if(b > 999999) b = 0;
 		if(c > 999999) c = 0;
 		if(d > 999999) d = 0;
-		sprintf(buf,"A:%06dB:%06d",a,b);
+		sprintf(disp_buf,"A:%06dB:%06d",a,b);
 #ifdef CLCD_TIME_EVAL
 		start_tick = htim15.Instance->CNT;
 #endif
-		i2c_lcd_string(0, 0,buf); //315~318 us 걸림.. 두줄 출력하면 630 us 정도
+		i2c_lcd_string(0, 0,disp_buf); //34.117ms , x 2 = 68.234 ms lcd display
 #ifdef CLCD_TIME_EVAL
 		end_tick = htim15.Instance->CNT;
 #endif
-		sprintf(buf,"C:%06dD:%06d",c,d);
-		i2c_lcd_string(1, 0,buf);
+		sprintf(disp_buf,"C:%06dD:%06d",c,d);
+		i2c_lcd_string(1, 0,disp_buf);
 #ifdef CLCD_TIME_EVAL
 		end_tick -= start_tick;
 		end_tick &= 0xffff;
-		printf("Elpased = %d (%d us)\n", end_tick, (int)( end_tick / 80. + 0.5));
+		info_printf("Elpased = %d (%d us)\n", end_tick, (int)( end_tick / 1. + 0.5));
 #endif
+		if(g_output_to_pc){
+			SEQ_ADV(ray_counter.seq);
+			if(sys_info.dis_format == D_FMT_DEC)
+			{
+				sprintf(buf,"%cD%c%05d,",START_CHAR,sys_info.cnt_type == CNT_TYPE_W ? 'W':'O', ray_counter.seq);
+				sprintf(buf+strlen(buf),"%06d,%06d,%06d,%06d%c",a,b,c,d,END_CHAR);
+#ifdef USART2_DMA
+				while(g_dma_tx_flag); g_dma_tx_flag = 1;
+			    HAL_UART_Transmit_DMA(&huart2,(uint8_t *)buf, strlen(buf));
+				while(huart2.hdmatx->Instance->CNDTR);
+#else
+			    HAL_UART_Transmit(&huart2,(uint8_t *)buf, strlen(buf), 1000);
+#endif
+			}
+			else if(sys_info.dis_format == D_FMT_HEX)
+			{
+				sprintf(buf,"%cH%c%05x,",START_CHAR,sys_info.cnt_type == CNT_TYPE_W ? 'W':'O', ray_counter.seq);
+				sprintf(buf+strlen(buf),"%06x,%06x,%06x,%06x%c",a,b,c,d,END_CHAR);
+#ifdef USART2_DMA
+				while(g_dma_tx_flag); g_dma_tx_flag = 1;
+			    HAL_UART_Transmit_DMA(&huart2,(uint8_t *)buf, strlen(buf));
+#else
+			    HAL_UART_Transmit(&huart2,(uint8_t *)buf, strlen(buf), 1000);
+#endif
+			}
+			else info_printf("Error display format = %d\n",sys_info.dis_format);
+		}
+		for( i = 0 ; i < 8 ; i ++) ray_counter.acc_cntrs[i] = 0;
 		ray_counter.update_tick = cur_tick;
 	}
 
@@ -245,7 +328,7 @@ void process_cmd()
 	sscanf((char *)rx_cmd_buf + 4 + 6,"%x",(unsigned int*)&counter_l_limit);
 	rx_cmd_buf[4 + 6 + 6] = save_ch;
 #ifdef PROTOCOL_DEBUG
-	printf("RUN_TIME=%x, U_LIMIT=%06x, L_LIMIT=%06x\n",
+	info_printf("RUN_TIME=%x, U_LIMIT=%06x, L_LIMIT=%06x\n",
 			run_time, counter_h_limit, counter_l_limit);
 #endif
 	S_counter_h_limit = counter_h_limit;

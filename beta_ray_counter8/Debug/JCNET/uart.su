@@ -1,7 +1,8 @@
-uart.c:22:6:HAL_UART_ErrorCallback	16	static
-uart.c:40:6:reinit_uart	16	static
-uart.c:73:9:gethex	24	static
-uart.c:90:6:uart_rx_char	16	static
-uart.c:178:10:A2HEX	24	static
-uart.c:205:6:rx_dma_process	56	static
-uart.c:301:6:uart_loop	16	static
+uart.c:21:6:HAL_UART_TxCpltCallback	16	static
+uart.c:29:6:HAL_UART_ErrorCallback	16	static
+uart.c:47:6:reinit_uart	16	static
+uart.c:80:9:gethex	24	static
+uart.c:97:6:uart_rx_char	16	static
+uart.c:185:10:A2HEX	24	static
+uart.c:212:6:rx_dma_process	56	static
+uart.c:308:6:uart_task	16	static

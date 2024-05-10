@@ -17,7 +17,14 @@ extern UART_HandleTypeDef huart2;
 
 extern UART_HandleTypeDef huart1;
 extern DMA_HandleTypeDef hdma_usart1_rx;
-
+extern __IO g_dma_tx_flag;
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if(huart == &huart2)
+	{
+		g_dma_tx_flag = 0;
+	}
+}
 __IO uint32_t reinit_flag_1,reinit_flag_2;
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
@@ -298,7 +305,7 @@ xxx:
 
 }
 #endif
-void uart_loop()
+void uart_task()
 {
 //	rx_dma_process();
 

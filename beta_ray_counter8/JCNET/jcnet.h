@@ -7,8 +7,13 @@
 
 #ifndef JCNET_H_
 #define JCNET_H_
+#define MASTER_MODE
+#define USART2_DMA
+//#define CLCD_TIME_EVAL
+
 
 typedef struct _counters_tag_ {
+	uint32_t seq;
 	uint32_t rd_tick;
 	uint32_t update_tick;
 //	uint32_t update_period_tick;
@@ -16,6 +21,9 @@ typedef struct _counters_tag_ {
 	uint32_t acc_cntrs[8]; // 0-3 : master, 4-7 : slave
 	uint32_t pre_cntrs[8];
 } counter_type;
+#define START_CHAR 'S'
+#define END_CHAR '\x0a'
+
 #define CNT_TYPE_W  0
 #define CNT_TYPE_O  1
 #define D_FMT_DEC 0
@@ -25,6 +33,11 @@ typedef struct _system_info_tag_ {
 	uint32_t dis_format : 2; // 0 : decimal, 1 : hex
 	uint32_t update_period_tick : 28;
 } system_type;
+#define SEQ_ADV(x) do {\
+		if(sys_info.dis_format == D_FMT_DEC && x >= 99999) x = 0 ; \
+		else if(x >= 0xffff) x = 0; \
+		else x ++; \
+	} while(0)
 
 typedef struct _uart_tag_ {
         uint8_t *data; // [UART_Q_SZ];
@@ -38,6 +51,7 @@ typedef struct _uart_tag_ {
 #define COUNTER_GATHER_PERIOD 10 // 10 mili gathering
 #define COUNTER_UPDATE_DFT_PERIOD 100 // 100 ms = 0.1 Hz
 #define STX 02
+
 extern char __IO uart1_rx_buf[UART1_DMA_BUF_SZ];
 extern char __IO uart2_rx_buf[1];
 
@@ -60,4 +74,9 @@ int param_get(uint32_t *v);
 int param_set(uint32_t v);
 int erase_pages(int page, int num);
 extern system_type sys_info;
+
+extern void info_printf(char *fmt,...);
+extern void (*g_dbg_print)(char*);
+extern __IO g_dma_tx_flag;
+extern __IO uint32_t g_output_to_pc;
 #endif /* JCNET_H_ */

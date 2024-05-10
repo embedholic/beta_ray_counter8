@@ -16,7 +16,13 @@ extern TIM_HandleTypeDef htim2;
 int _write(int file, char *data, int len)
 {
     int bytes_written;
+#ifdef USART2_DMA
+	while(g_dma_tx_flag); g_dma_tx_flag = 1;
+    HAL_UART_Transmit_DMA(&huart2,(uint8_t *)data, len);
+	while(g_dma_tx_flag);
+#else
     HAL_UART_Transmit(&huart2,(uint8_t *)data, len, 1000);
+#endif
     bytes_written = len;
     return bytes_written;
 }
@@ -113,7 +119,7 @@ void my_loop()
 		}
 
 		counter_task();
-		uart_loop();
+		uart_task();
 	}
 }
 
@@ -162,7 +168,7 @@ int param_get(uint32_t *v)
     uint32_t a,b;
     a = ((__IO uint32_t *)addr)[0];
     b = ((__IO uint32_t *)addr)[1];
-    if(a == 0xffffffff && b == 0xffffffff) return 2;
+//    if(a == 0xffffffff && b == 0xffffffff) return 2;
     b = a + b;
     if(b == 0xffffffff)
     {
@@ -170,4 +176,18 @@ int param_get(uint32_t *v)
     	return 0;
     }
     return 1;
+}
+#include <stdarg.h>
+static char info_print_buf[256];
+
+void info_printf(char *fmt,...)
+{
+	va_list argp;
+	if(g_dbg_print)
+	{
+		va_start(argp, fmt);
+		vsprintf(info_print_buf, fmt, argp);
+		g_dbg_print(info_print_buf);
+		va_end(argp);
+	}
 }

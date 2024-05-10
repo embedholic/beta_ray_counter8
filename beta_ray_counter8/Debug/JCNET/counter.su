@@ -1,4 +1,4 @@
-counter.c:97:6:exec_counter_param	16	static
-counter.c:106:6:update_slave_cnt	16	static
-counter.c:114:6:counter_task	56	static
-counter.c:229:6:process_cmd	24	static
+counter.c:102:6:exec_counter_param	32	static
+counter.c:152:6:update_slave_cnt	16	static
+counter.c:160:6:counter_task	48	static
+counter.c:312:6:process_cmd	24	static
